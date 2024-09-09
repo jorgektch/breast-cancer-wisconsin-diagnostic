@@ -185,8 +185,25 @@ sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
 st.pyplot(fig)
 
 st.write("#### Reporte de Clasificación")
-report = classification_report(y_test, y_pred, target_names=["Benigno", "Maligno"])
-st.text(report)
+
+# Convertir el reporte de clasificación a DataFrame
+report_dict = classification_report(y_test, y_pred, target_names=["Benigno", "Maligno"], output_dict=True)
+report_df = pd.DataFrame(report_dict).transpose()
+
+# Mostrar el reporte de clasificación como tabla
+st.dataframe(report_df)
+
+# Explicación de los valores del reporte de clasificación
+st.write("""
+### Explicación de los valores en el reporte de clasificación
+1. **Precision**: Proporción de verdaderos positivos entre el total de positivos predichos. Indica cuántos de los elementos etiquetados como positivos realmente son positivos. Un valor alto significa que hay pocos falsos positivos.
+2. **Recall (Sensibilidad)**: Proporción de verdaderos positivos entre el total de positivos reales. Mide la capacidad del modelo para detectar positivos. Un valor alto indica que el modelo detecta la mayoría de los verdaderos positivos.
+3. **F1-Score**: Promedio armónico de la precisión y el recall. Es una medida combinada que toma en cuenta tanto los falsos positivos como los falsos negativos. Un valor alto indica un buen equilibrio entre precisión y recall.
+4. **Support**: Número de ocurrencias de cada clase en los datos de prueba. Indica el número de ejemplos reales para cada clase.
+5. **Accuracy (Precisión Global)**: Proporción de todas las predicciones correctas sobre el total de predicciones realizadas. Mide la capacidad global del modelo para clasificar correctamente.
+6. **Macro Average**: Promedio de las métricas (precision, recall, f1-score) para cada clase, sin tener en cuenta el soporte de cada clase. Es útil para evaluar el rendimiento general del modelo sin considerar el desequilibrio en el soporte.
+7. **Weighted Average**: Promedio ponderado de las métricas (precision, recall, f1-score) considerando el soporte de cada clase. Da más peso a las clases con más ejemplos. Es útil cuando las clases están desequilibradas.
+""")
 
 # Predicción con nuevos datos
 st.write("## Predicción con nuevos datos")
