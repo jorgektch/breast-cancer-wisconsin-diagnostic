@@ -4,8 +4,6 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, classification_report
 from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
-from sklearn.decomposition import PCA
 import seaborn as sns
 import matplotlib.pyplot as plt
 from collections import Counter
@@ -20,11 +18,11 @@ class KNN:
         self.k = k
     
     def fit(self, X_train, y_train):
-        self.X_train = np.array(X_train)  # Convertir a array para asegurar consistencia
-        self.y_train = np.array(y_train)  # Convertir a array para asegurar consistencia
+        self.X_train = X_train
+        self.y_train = y_train
     
     def predict(self, X_test):
-        predictions = [self._predict(x) for x in np.array(X_test)]
+        predictions = [self._predict(x) for x in X_test]
         return np.array(predictions)
     
     def _predict(self, x):
@@ -40,30 +38,16 @@ def load_data():
     df = pd.read_csv('data.csv')
     return df
 
-# Preprocesamiento de datos mejorado
-def preprocess_data(df, fit_scaler=True):
+# Preprocesamiento de datos
+def preprocess_data(df):
     df = df.drop(columns=['id'])  # Eliminar columna ID
     df['diagnosis'] = df['diagnosis'].map({'M': 1, 'B': 0})  # Convertir la columna diagnosis a valores binarios
-
-    # Eliminación de características menos relevantes
-    df = df.drop(columns=['fractal_dimension_mean', 'fractal_dimension_worst', 'fractal_dimension_se'])
-
     X = df.drop(columns=['diagnosis'])
-    y = df['diagnosis'] if 'diagnosis' in df.columns else None
-
-    # Imputación de valores faltantes con la media
-    imputer = SimpleImputer(strategy='mean')
-    X_imputed = imputer.fit_transform(X) if fit_scaler else imputer.transform(X)
-
+    y = df['diagnosis']
     # Normalización de los datos
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_imputed) if fit_scaler else scaler.transform(X_imputed)
-
-    # Reducción de dimensionalidad con PCA
-    pca = PCA(n_components=10)
-    X_reduced = pca.fit_transform(X_scaled) if fit_scaler else pca.transform(X_scaled)
-
-    return X_reduced, y, imputer, scaler, pca, X.columns  # Devolver los nombres de las columnas
+    X = scaler.fit_transform(X)
+    return X, y
 
 # Interfaz de Streamlit
 st.title('Clasificación de Cáncer de Mama usando KNN')
@@ -99,9 +83,6 @@ Este dataset describe las características de los núcleos celulares presentes e
 - **id**: Entero.
 - **diagnosis**: Cadena de texto (M, B).
 - **Otros atributos**: Valores reales (float).
-
-### Elección de k=3 en KNN:
-El valor de k en KNN define el número de vecinos más cercanos que se consideran para determinar la clase de un punto de datos. La elección de k=3 es común porque proporciona un equilibrio entre suavizar el ruido en los datos y mantener un modelo sensible a la estructura subyacente. Con k=3, el modelo es menos propenso a sobreajustarse a un único vecino ruidoso, pero sigue siendo lo suficientemente sensible como para capturar la variabilidad en los datos.
 """)
 
 # Cargar el archivo de datos
@@ -109,38 +90,50 @@ df = load_data()
 st.write("## Vista previa del dataset")
 st.dataframe(df.head())
 
-# Inicializar el modelo KNN y otros objetos en el estado de la sesión
-if 'knn' not in st.session_state:
-    st.session_state.knn = KNN(k=3)
-if 'imputer' not in st.session_state:
-    st.session_state.imputer = None
-if 'scaler' not in st.session_state:
-    st.session_state.scaler = None
-if 'pca' not in st.session_state:
-    st.session_state.pca = None
-if 'column_names' not in st.session_state:
-    st.session_state.column_names = []
+# Preprocesamiento de datos
+X, y = preprocess_data(df)
+
+# Dividir los datos en entrenamiento y prueba (80% y 20%)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+st.write("""
+### Implementación del algoritmo KNN
+El siguiente código implementa el algoritmo KNN desde cero utilizando la distancia euclidiana:
+""")
+st.code('''
+class KNN:
+    def __init__(self, k=3):
+        self.k = k
+    
+    def fit(self, X_train, y_train):
+        self.X_train = X_train
+        self.y_train = y_train
+    
+    def predict(self, X_test):
+        predictions = [self._predict(x) for x in X_test]
+        return np.array(predictions)
+    
+    def _predict(self, x):
+        distances = [euclidean_distance(x, x_train) for x_train in self.X_train]
+        k_indices = np.argsort(distances)[:self.k]
+        k_nearest_labels = [self.y_train[i] for i in k_indices]
+        most_common = Counter(k_nearest_labels).most_common(1)
+        return most_common[0][0]
+''', language='python')
 
 # Entrenamiento del modelo
+knn = KNN(k=3)
+
 if st.button("Entrenar modelo"):
-    # Preprocesamiento y ajuste del modelo KNN
-    X, y, imputer, scaler, pca, column_names = preprocess_data(df)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Guardar los objetos ajustados en el estado de la sesión
-    st.session_state.knn.fit(X_train, y_train)
-    st.session_state.imputer = imputer
-    st.session_state.scaler = scaler
-    st.session_state.pca = pca
-    st.session_state.column_names = list(column_names)  # Guardar nombres de columnas para validación
-    
-    # Evaluar el modelo
-    y_pred = st.session_state.knn.predict(X_test)
+    knn.fit(X_train, y_train)
+    y_pred = knn.predict(X_test)
+
+    # Evaluación del modelo
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
 
-    st.write(f"### Métricas del modelo usando 80% para entrenamiento y 20% para prueba")
+    st.write(f"### Métricas del modelo")
     st.write(f"- Precisión (Accuracy): {accuracy:.2f}")
     st.write(f"- F1-Score: {f1:.2f}")
     
@@ -159,27 +152,12 @@ new_file = st.file_uploader("Sube un archivo con nuevos datos para predicción (
 
 if new_file is not None:
     new_data = pd.read_csv(new_file)
+    new_data_processed = scaler.transform(new_data.drop(columns=['id']))  # Preprocesar
+    predictions = knn.predict(new_data_processed)
 
-    # Verificar si los objetos ajustados existen en el estado de la sesión
-    if st.session_state.imputer is None or st.session_state.scaler is None or st.session_state.pca is None:
-        st.error("El modelo no está entrenado. Entrena el modelo primero antes de realizar predicciones.")
-    else:
-        # Asegurar que las columnas estén en el mismo orden que el entrenamiento
-        new_data = new_data.drop(columns=['id'], errors='ignore')  # Eliminar columna ID si está presente
-        new_data = new_data.drop(columns=['diagnosis'], errors='ignore')  # Eliminar columna diagnosis si está presente
-        new_data = new_data.reindex(columns=st.session_state.column_names, fill_value=0)
+    # Asignar las predicciones al dataset
+    new_data['diagnosis'] = np.where(predictions == 1, 'M', 'B')
 
-        # Imputar, normalizar y reducir dimensionalidad de los nuevos datos
-        new_data_imputed = st.session_state.imputer.transform(new_data)
-        new_data_processed = st.session_state.scaler.transform(new_data_imputed)
-        new_data_reduced = st.session_state.pca.transform(new_data_processed)
-
-        # Predecir con el modelo KNN
-        predictions = st.session_state.knn.predict(new_data_reduced)
-
-        # Asignar las predicciones al dataset
-        new_data['diagnosis'] = np.where(predictions == 1, 'M', 'B')
-
-        st.write("### Predicciones")
-        st.dataframe(new_data)
-        st.download_button(label="Descargar predicciones", data=new_data.to_csv(index=False), file_name="predicciones.csv")
+    st.write("### Predicciones")
+    st.dataframe(new_data)
+    st.download_button(label="Descargar predicciones", data=new_data.to_csv(index=False), file_name="predicciones.csv")
