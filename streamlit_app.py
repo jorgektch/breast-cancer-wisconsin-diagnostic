@@ -41,7 +41,7 @@ def load_data():
     return df
 
 # Preprocesamiento de datos mejorado
-def preprocess_data(df, fit_scaler=True):
+def preprocess_data(df):
     df = df.drop(columns=['id'])  # Eliminar columna ID
     df['diagnosis'] = df['diagnosis'].map({'M': 1, 'B': 0})  # Convertir la columna diagnosis a valores binarios
 
@@ -53,15 +53,15 @@ def preprocess_data(df, fit_scaler=True):
 
     # Imputación de valores faltantes con la media
     imputer = SimpleImputer(strategy='mean')
-    X_imputed = imputer.fit_transform(X) if fit_scaler else imputer.transform(X)
+    X_imputed = imputer.fit_transform(X)
 
     # Normalización de los datos
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_imputed) if fit_scaler else scaler.transform(X_imputed)
+    X_scaled = scaler.fit_transform(X_imputed)
 
     # Reducción de dimensionalidad con PCA
     pca = PCA(n_components=10)
-    X_reduced = pca.fit_transform(X_scaled) if fit_scaler else pca.transform(X_scaled)
+    X_reduced = pca.fit_transform(X_scaled)
 
     return X_reduced, y, imputer, scaler, pca, X.columns  # Devolver los nombres de las columnas
 
@@ -122,36 +122,34 @@ if 'column_names' not in st.session_state:
     st.session_state.column_names = []
 
 # Entrenamiento del modelo
-if st.button("Entrenar modelo"):
-    # Preprocesamiento y ajuste del modelo KNN
-    X, y, imputer, scaler, pca, column_names = preprocess_data(df)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Guardar los objetos ajustados en el estado de la sesión
-    st.session_state.knn.fit(X_train, y_train)
-    st.session_state.imputer = imputer
-    st.session_state.scaler = scaler
-    st.session_state.pca = pca
-    st.session_state.column_names = list(column_names)  # Guardar nombres de columnas para validación
-    
-    # Evaluar el modelo
-    y_pred = st.session_state.knn.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
-    cm = confusion_matrix(y_test, y_pred)
+X, y, imputer, scaler, pca, column_names = preprocess_data(df)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    st.write(f"### Métricas del modelo usando 80% para entrenamiento y 20% para prueba")
-    st.write(f"- Precisión (Accuracy): {accuracy:.2f}")
-    st.write(f"- F1-Score: {f1:.2f}")
-    
-    st.write("#### Matriz de confusión")
-    fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-    st.pyplot(fig)
-    
-    st.write("#### Reporte de Clasificación")
-    report = classification_report(y_test, y_pred, target_names=["Benigno", "Maligno"])
-    st.text(report)
+# Guardar los objetos ajustados en el estado de la sesión
+st.session_state.knn.fit(X_train, y_train)
+st.session_state.imputer = imputer
+st.session_state.scaler = scaler
+st.session_state.pca = pca
+st.session_state.column_names = list(column_names)  # Guardar nombres de columnas para validación
+
+# Evaluar el modelo
+y_pred = st.session_state.knn.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred)
+
+st.write(f"### Métricas del modelo usando 80% para entrenamiento y 20% para prueba")
+st.write(f"- Precisión (Accuracy): {accuracy:.2f}")
+st.write(f"- F1-Score: {f1:.2f}")
+
+st.write("#### Matriz de confusión")
+fig, ax = plt.subplots()
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
+st.pyplot(fig)
+
+st.write("#### Reporte de Clasificación")
+report = classification_report(y_test, y_pred, target_names=["Benigno", "Maligno"])
+st.text(report)
 
 # Predicción con nuevos datos
 st.write("## Predicción con nuevos datos")
