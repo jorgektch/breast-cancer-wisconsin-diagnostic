@@ -73,11 +73,11 @@ st.write("""
 El objetivo es clasificar los tumores mamarios como malignos o benignos utilizando un modelo K-Nearest Neighbors (KNN) basado en las características de los núcleos celulares.
 
 <div style="text-align: center;">
-    <img src="https://cdn.myportfolio.com/bcfbbaaa4fc08b26dd3fcdc1a7bacca6/9002b6a83cabab09a5721896e_rw_1200.jpg?h=67a0997f40579778103884702fb3e3d7" alt="Punción Aspiración por Aguja Fina">
+    <img src="https://cdn.myportfolio.com/bcfbbaaa4fc08b26dd3fcdc1a7bacca6/9002b6a83cabab09a521896e_rw_1200.jpg?h=67a0997f40579778103884702fb3e3d7" alt="Punción Aspiración por Aguja Fina">
     <p>Fuente: Manuel Romera. Cáncer de Mama - Infografías <a href="https://manuelromera.com/cancer-de-mama-infografias">Enlace</a></p>
 </div>
 
-<div style="align-items: center;">
+<div style="text-align: center;">
     <img src="https://www.redalyc.org/journal/3756/375669596003/375669596003_gf3.png" alt="Muestra de tejido obtenida por PAAF">
     <p>Fuente: Andrés Duque, Ana Karina Ramírez, Jorge Pérez. Punción aspiración con aguja fina guiada por ultrasonido de nódulos mamarios de alta sospecha <a href="https://www.redalyc.org/journal/3756/375669596003/html/">Enlace</a></p>
 </div>
@@ -111,7 +111,26 @@ Este dataset describe las características de los núcleos celulares presentes e
     10. **concave_points_mean**: Número de porciones cóncavas del contorno.
     11. **symmetry_mean**: Simetría.
     12. **fractal_dimension_mean**: "Aproximación de la línea de costa" - 1.
-    13. ...: (y otros atributos similares basados en el análisis de imágenes).
+    13. **radius_se**: Desviación estándar del radio.
+    14. **texture_se**: Desviación estándar de la textura.
+    15. **perimeter_se**: Desviación estándar del perímetro.
+    16. **area_se**: Desviación estándar del área.
+    17. **smoothness_se**: Desviación estándar de la suavidad.
+    18. **compactness_se**: Desviación estándar de la compacidad.
+    19. **concavity_se**: Desviación estándar de la concavidad.
+    20. **concave_points_se**: Desviación estándar de los puntos cóncavos.
+    21. **symmetry_se**: Desviación estándar de la simetría.
+    22. **fractal_dimension_se**: Desviación estándar de la dimensión fractal.
+    23. **radius_worst**: Peor valor del radio.
+    24. **texture_worst**: Peor valor de la textura.
+    25. **perimeter_worst**: Peor valor del perímetro.
+    26. **area_worst**: Peor valor del área.
+    27. **smoothness_worst**: Peor valor de la suavidad.
+    28. **compactness_worst**: Peor valor de la compacidad.
+    29. **concavity_worst**: Peor valor de la concavidad.
+    30. **concave_points_worst**: Peor valor de los puntos cóncavos.
+    31. **symmetry_worst**: Peor valor de la simetría.
+    32. **fractal_dimension_worst**: Peor valor de la dimensión fractal.
 
 ### Tipos de Datos:
 - **id**: Entero.
@@ -198,4 +217,50 @@ if new_file is not None:
 
         st.write("### Predicciones")
         st.dataframe(new_data)
-        st.download_button(label="Descargar predicciones", data=new_data.to_csv(index=False), file_name="predicciones.csv")
+        st.download_button(label="Descargar predicciones", data=new_data.to_csv(index=False), file_name="data_con_prediccion.csv")
+
+# Descargar archivo CSV de ejemplo
+example_data = {
+    "id": [],
+    "diagnosis": [],
+    "radius_mean": [],
+    "texture_mean": [],
+    "perimeter_mean": [],
+    "area_mean": [],
+    "smoothness_mean": [],
+    "compactness_mean": [],
+    "concavity_mean": [],
+    "concave points_mean": [],
+    "symmetry_mean": [],
+    "fractal_dimension_mean": [],
+    "radius_se": [],
+    "texture_se": [],
+    "perimeter_se": [],
+    "area_se": [],
+    "smoothness_se": [],
+    "compactness_se": [],
+    "concavity_se": [],
+    "concave points_se": [],
+    "symmetry_se": [],
+    "fractal_dimension_se": [],
+    "radius_worst": [],
+    "texture_worst": [],
+    "perimeter_worst": [],
+    "area_worst": [],
+    "smoothness_worst": [],
+    "compactness_worst": [],
+    "concavity_worst": [],
+    "concave points_worst": [],
+    "symmetry_worst": [],
+    "fractal_dimension_worst": []
+}
+
+example_df = pd.DataFrame(example_data)
+csv = example_df.to_csv(index=False)
+
+st.download_button(
+    label="Descargar archivo CSV de ejemplo",
+    data=csv,
+    file_name="data_para_prediccion_ejemplo.csv",
+    mime="text/csv"
+)
