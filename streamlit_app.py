@@ -72,6 +72,22 @@ st.write("""
 ### Descripción del problema:
 El objetivo es clasificar los tumores mamarios como malignos o benignos utilizando un modelo K-Nearest Neighbors (KNN) basado en las características de los núcleos celulares.
 
+### Punción Aspiración por Aguja Fina (PAAF):
+La Punción Aspiración por Aguja Fina (PAAF) es un procedimiento diagnóstico utilizado en la evaluación de lesiones mamarias. Consiste en la obtención de una muestra de células del tejido mamario mediante una aguja fina para su posterior análisis bajo el microscopio. La PAAF es mínimamente invasiva y se usa para distinguir entre tumores benignos y malignos.
+
+**Aplicaciones en el diagnóstico de cáncer de mama:**
+- **Detección temprana:** La PAAF ayuda en la detección temprana del cáncer de mama, permitiendo el diagnóstico y tratamiento oportunos.
+- **Minimización de riesgos:** Ofrece una alternativa menos invasiva en comparación con biopsias más extensas, reduciendo el riesgo para la paciente.
+- **Guía para el tratamiento:** La información obtenida a través de PAAF puede ayudar a los médicos a planificar el tratamiento más adecuado basado en el tipo y grado del cáncer.
+
+**Imágenes de PAAF:**
+
+![Punción Aspiración por Aguja Fina](https://upload.wikimedia.org/wikipedia/commons/7/72/Needle_biopsy.png)
+*Fuente: [Wikipedia](https://en.wikipedia.org/wiki/File:Needle_biopsy.png)*
+
+![Muestra de tejido obtenida por PAAF](https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Breast_needle_biopsy_02.jpg/1280px-Breast_needle_biopsy_02.jpg)
+*Fuente: [Wikipedia](https://en.wikipedia.org/wiki/File:Breast_needle_biopsy_02.jpg)*
+
 ### Dataset:
 Este dataset describe las características de los núcleos celulares presentes en una imagen obtenida a partir de una aspiración con aguja fina (AAF) de una masa mamaria.
 
