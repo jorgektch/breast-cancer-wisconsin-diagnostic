@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, classification_report
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.decomposition import PCA
@@ -64,38 +65,81 @@ def preprocess_data(df):
 
     return X_reduced, y, imputer, scaler, pca, X.columns  # Devolver los nombres de las columnas
 
-# Función para calcular la matriz de confusión
-def custom_confusion_matrix(y_true, y_pred):
-    unique_labels = np.unique(np.concatenate([y_true, y_pred]))
-    cm = np.zeros((len(unique_labels), len(unique_labels)), dtype=int)
-    for i, true_label in enumerate(unique_labels):
-        for j, pred_label in enumerate(unique_labels):
-            cm[i, j] = np.sum((y_true == true_label) & (y_pred == pred_label))
-    return cm
-
-# Función para calcular métricas
-def calculate_metrics(cm):
-    TP = cm[1, 1]
-    TN = cm[0, 0]
-    FP = cm[0, 1]
-    FN = cm[1, 0]
-
-    # Exactitud
-    accuracy = (TP + TN) / np.sum(cm)
-
-    # Precisión
-    precision = TP / (TP + FP) if (TP + FP) > 0 else 0
-
-    # Recuperación (Recall)
-    recall = TP / (TP + FN) if (TP + FN) > 0 else 0
-
-    # F1-Score
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-
-    return accuracy, precision, recall, f1
-
 # Interfaz de Streamlit
 st.title('Clasificación de Cáncer de Mama usando KNN')
+
+st.write("""
+### Descripción del problema:
+El objetivo es clasificar los tumores mamarios como malignos o benignos utilizando un modelo K-Nearest Neighbors (KNN) basado en las características de los núcleos celulares.
+
+<div style="text-align: center;">
+    <img src="https://cdn.myportfolio.com/bcfbbaaa4fc08b26dd3fcdc1a7bacca6/9002b6a83cabab09a521896e_rw_1200.jpg?h=67a0997f40579778103884702fb3e3d7" alt="Punción Aspiración por Aguja Fina">
+    <p>Fuente: Manuel Romera. Cáncer de Mama - Infografías <a href="https://manuelromera.com/cancer-de-mama-infografias">Enlace</a></p>
+</div>
+
+<div style="text-align: center;">
+    <img src="https://www.redalyc.org/journal/3756/375669596003/375669596003_gf3.png" alt="Muestra de tejido obtenida por PAAF">
+    <p>Fuente: Andrés Duque, Ana Karina Ramírez, Jorge Pérez. Punción aspiración con aguja fina guiada por ultrasonido de nódulos mamarios de alta sospecha <a href="https://www.redalyc.org/journal/3756/375669596003/html/">Enlace</a></p>
+</div>
+
+### Punción Aspiración por Aguja Fina (PAAF):
+La Punción Aspiración por Aguja Fina (PAAF) es un procedimiento diagnóstico utilizado en la evaluación de lesiones mamarias. Consiste en la obtención de una muestra de células del tejido mamario mediante una aguja fina para su posterior análisis bajo el microscopio. La PAAF es mínimamente invasiva y se usa para distinguir entre tumores benignos y malignos.
+
+**Aplicaciones en el diagnóstico de cáncer de mama:**
+- **Detección temprana:** La PAAF ayuda en la detección temprana del cáncer de mama, permitiendo el diagnóstico y tratamiento oportunos.
+- **Minimización de riesgos:** Ofrece una alternativa menos invasiva en comparación con biopsias más extensas, reduciendo el riesgo para la paciente.
+- **Guía para el tratamiento:** La información obtenida a través de PAAF puede ayudar a los médicos a planificar el tratamiento más adecuado basado en el tipo y grado del cáncer.
+
+### Dataset:
+Este dataset describe las características de los núcleos celulares presentes en una imagen obtenida a partir de una aspiración con aguja fina (AAF) de una masa mamaria.
+
+- **Fuente Kaggle**: [Wisconsin Breast Cancer Dataset](https://www.kaggle.com/datasets/uciml/breast-cancer-wisconsin-data?select=data.csv)
+- **Fuente UC Irvine Machine Learning Repository**: [Wisconsin Breast Cancer Diagnostic Dataset](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic)
+
+### Descripción del Dataset:
+- **Número de registros**: 569
+- **Nombres de las columnas y su descripción**:
+    1. **id**: Número de identificación (no utilizado en el modelo).
+    2. **diagnosis**: Diagnóstico (M = maligno, B = benigno).
+    3. **radius_mean**: Media de distancias desde el centro hasta los puntos en el perímetro.
+    4. **texture_mean**: Desviación estándar de los valores de escala de grises.
+    5. **perimeter_mean**: Perímetro.
+    6. **area_mean**: Área.
+    7. **smoothness_mean**: Variación local en la longitud del radio.
+    8. **compactness_mean**: (perímetro^2 / área - 1.0).
+    9. **concavity_mean**: Severidad de las porciones cóncavas del contorno.
+    10. **concave_points_mean**: Número de porciones cóncavas del contorno.
+    11. **symmetry_mean**: Simetría.
+    12. **fractal_dimension_mean**: "Aproximación de la línea de costa" - 1.
+    13. **radius_se**: Desviación estándar del radio.
+    14. **texture_se**: Desviación estándar de la textura.
+    15. **perimeter_se**: Desviación estándar del perímetro.
+    16. **area_se**: Desviación estándar del área.
+    17. **smoothness_se**: Desviación estándar de la suavidad.
+    18. **compactness_se**: Desviación estándar de la compacidad.
+    19. **concavity_se**: Desviación estándar de la concavidad.
+    20. **concave_points_se**: Desviación estándar de los puntos cóncavos.
+    21. **symmetry_se**: Desviación estándar de la simetría.
+    22. **fractal_dimension_se**: Desviación estándar de la dimensión fractal.
+    23. **radius_worst**: Peor valor del radio.
+    24. **texture_worst**: Peor valor de la textura.
+    25. **perimeter_worst**: Peor valor del perímetro.
+    26. **area_worst**: Peor valor del área.
+    27. **smoothness_worst**: Peor valor de la suavidad.
+    28. **compactness_worst**: Peor valor de la compacidad.
+    29. **concavity_worst**: Peor valor de la concavidad.
+    30. **concave_points_worst**: Peor valor de los puntos cóncavos.
+    31. **symmetry_worst**: Peor valor de la simetría.
+    32. **fractal_dimension_worst**: Peor valor de la dimensión fractal.
+
+### Tipos de Datos:
+- **id**: Entero.
+- **diagnosis**: Cadena de texto (M, B).
+- **Otros atributos**: Valores reales (float).
+
+### Elección de k=3 en KNN:
+El valor de k en KNN define el número de vecinos más cercanos que se consideran para determinar la clase de un punto de datos. La elección de k=3 es común porque proporciona un equilibrio entre suavizar el ruido en los datos y mantener un modelo sensible a la estructura subyacente. Con k=3, el modelo es menos propenso a sobreajustarse a un único vecino ruidoso, pero sigue siendo lo suficientemente sensible como para capturar la variabilidad en los datos.
+""", unsafe_allow_html=True)
 
 # Cargar el archivo de datos
 df = load_data()
@@ -127,28 +171,156 @@ st.session_state.column_names = list(column_names)  # Guardar nombres de columna
 
 # Evaluar el modelo
 y_pred = st.session_state.knn.predict(X_test)
-
-# Calcular la matriz de confusión
-cm = custom_confusion_matrix(y_test, y_pred)
-
-# Calcular las métricas
-accuracy, precision, recall, f1 = calculate_metrics(cm)
+accuracy = accuracy_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred)
 
 st.write(f"### Métricas del modelo usando 80% para entrenamiento y 20% para prueba")
-st.write(f"- Exactitud (Accuracy): {accuracy:.2f}")
-st.write(f"- Precisión (Precision): {precision:.2f}")
-st.write(f"- Recuperación (Recall): {recall:.2f}")
+st.write(f"- Precisión (Accuracy): {accuracy:.2f}")
 st.write(f"- F1-Score: {f1:.2f}")
 
-# Mostrar la matriz de confusión
 st.write("#### Matriz de confusión")
 fig, ax = plt.subplots()
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
 st.pyplot(fig)
 
+st.write("#### Reporte de Clasificación")
+
+# Convertir el reporte de clasificación a DataFrame
+report_dict = classification_report(y_test, y_pred, target_names=["Benigno", "Maligno"], output_dict=True)
+report_df = pd.DataFrame(report_dict).transpose()
+
+# Mostrar el reporte de clasificación como tabla
+st.dataframe(report_df)
+
+# Explicación de los valores del reporte de clasificación
+st.write("""
+### Explicación de los valores en el reporte de clasificación
+1. **Precision**: Proporción de verdaderos positivos entre el total de positivos predichos. Indica cuántos de los elementos etiquetados como positivos realmente son positivos. Un valor alto significa que hay pocos falsos positivos.
+2. **Recall (Sensibilidad)**: Proporción de verdaderos positivos entre el total de positivos reales. Mide la capacidad del modelo para detectar positivos. Un valor alto indica que el modelo detecta la mayoría de los verdaderos positivos.
+3. **F1-Score**: Promedio armónico de la precisión y el recall. Es una medida combinada que toma en cuenta tanto los falsos positivos como los falsos negativos. Un valor alto indica un buen equilibrio entre precisión y recall.
+4. **Support**: Número de ocurrencias de cada clase en los datos de prueba. Indica el número de ejemplos reales para cada clase.
+5. **Accuracy (Precisión Global)**: Proporción de todas las predicciones correctas sobre el total de predicciones realizadas. Mide la capacidad global del modelo para clasificar correctamente.
+6. **Macro Average**: Promedio de las métricas (precision, recall, f1-score) para cada clase, sin tener en cuenta el soporte de cada clase. Es útil para evaluar el rendimiento general del modelo sin considerar el desequilibrio en el soporte.
+7. **Weighted Average**: Promedio ponderado de las métricas (precision, recall, f1-score) considerando el soporte de cada clase. Da más peso a las clases con más ejemplos. Es útil cuando las clases están desequilibradas.
+""")
+
+# Predicción con nuevos datos
+st.write("## Predicción con nuevos datos")
+new_file = st.file_uploader("Sube un archivo con nuevos datos para predicción (debe tener la misma estructura que el dataset de entrenamiento)", type="csv")
+
+if new_file is not None:
+    new_data = pd.read_csv(new_file)
+
+    # Verificar si los objetos ajustados existen en el estado de la sesión
+    if st.session_state.imputer is None or st.session_state.scaler is None or st.session_state.pca is None:
+        st.error("El modelo no está entrenado. Entrena el modelo primero antes de realizar predicciones.")
+    else:
+        # Asegurar que las columnas estén en el mismo orden que el entrenamiento
+        new_data = new_data.drop(columns=['id'], errors='ignore')  # Eliminar columna ID si está presente
+        new_data = new_data.drop(columns=['diagnosis'], errors='ignore')  # Eliminar columna diagnosis si está presente
+        new_data = new_data.reindex(columns=st.session_state.column_names, fill_value=0)
+
+        # Imputar, normalizar y reducir dimensionalidad de los nuevos datos
+        new_data_imputed = st.session_state.imputer.transform(new_data)
+        new_data_processed = st.session_state.scaler.transform(new_data_imputed)
+        new_data_reduced = st.session_state.pca.transform(new_data_processed)
+
+        # Predecir con el modelo KNN
+        predictions = st.session_state.knn.predict(new_data_reduced)
+
+        # Asignar las predicciones al dataset
+        new_data['diagnosis'] = np.where(predictions == 1, 'M', 'B')
+
+        st.write("### Predicciones")
+        st.dataframe(new_data)
+        st.download_button(label="Descargar predicciones", data=new_data.to_csv(index=False), file_name="data_con_prediccion.csv")
+
+# Descargar archivo CSV de ejemplo
+example_data = {
+    "id": [],
+    "diagnosis": [],
+    "radius_mean": [],
+    "texture_mean": [],
+    "perimeter_mean": [],
+    "area_mean": [],
+    "smoothness_mean": [],
+    "compactness_mean": [],
+    "concavity_mean": [],
+    "concave points_mean": [],
+    "symmetry_mean": [],
+    "fractal_dimension_mean": [],
+    "radius_se": [],
+    "texture_se": [],
+    "perimeter_se": [],
+    "area_se": [],
+    "smoothness_se": [],
+    "compactness_se": [],
+    "concavity_se": [],
+    "concave points_se": [],
+    "symmetry_se": [],
+    "fractal_dimension_se": [],
+    "radius_worst": [],
+    "texture_worst": [],
+    "perimeter_worst": [],
+    "area_worst": [],
+    "smoothness_worst": [],
+    "compactness_worst": [],
+    "concavity_worst": [],
+    "concave points_worst": [],
+    "symmetry_worst": [],
+    "fractal_dimension_worst": []
+}
+
+example_df = pd.DataFrame(example_data)
+csv = example_df.to_csv(index=False)
+
+st.download_button(
+    label="Descargar archivo CSV de ejemplo",
+    data=csv,
+    file_name="data_para_prediccion_ejemplo.csv",
+    mime="text/csv"
+)
+
+# Función personalizada para calcular la matriz de confusión
+def confusion_matrix_custom(y_true, y_pred):
+    unique_labels = np.unique(y_true)
+    matrix = np.zeros((len(unique_labels), len(unique_labels)), dtype=int)
+    label_to_index = {label: idx for idx, label in enumerate(unique_labels)}
+
+    for true_label, pred_label in zip(y_true, y_pred):
+        true_idx = label_to_index[true_label]
+        pred_idx = label_to_index[pred_label]
+        matrix[true_idx, pred_idx] += 1
+
+    return matrix
+
+# Función para calcular las métricas usando la matriz de confusión
+def calculate_metrics(cm):
+    # Verdaderos Positivos (VP), Falsos Positivos (FP), Falsos Negativos (FN) y Verdaderos Negativos (VN)
+    vp = np.diag(cm)
+    fp = cm.sum(axis=0) - vp
+    fn = cm.sum(axis=1) - vp
+    vn = cm.sum() - (fp + fn + vp)
+
+    # Exactitud
+    accuracy = (vp.sum() / cm.sum()) if cm.sum() else 0
+
+    # Precisión, recuperación y F1 por clase
+    precision = np.where((vp + fp) > 0, vp / (vp + fp), 0)
+    recall = np.where((vp + fn) > 0, vp / (vp + fn), 0)
+    f1 = np.where((precision + recall) > 0, 2 * (precision * recall) / (precision + recall), 0)
+
+    # Promedio ponderado de las métricas
+    weighted_precision = np.average(precision, weights=cm.sum(axis=1))
+    weighted_recall = np.average(recall, weights=cm.sum(axis=1))
+    weighted_f1 = np.average(f1, weights=cm.sum(axis=1))
+
+    return accuracy, weighted_precision, weighted_recall, weighted_f1
+
 # Mostrar el código del clasificador KNN
-with st.expander("Código del clasificador KNN"):
-    st.code('''
+st.write("### Código del Clasificador KNN")
+knn_code = '''
 class KNN:
     def __init__(self, k=3):
         self.k = k
@@ -162,34 +334,58 @@ class KNN:
         return np.array(predictions)
     
     def _predict(self, x):
-        distances = [euclidean_distance(x, x_train) for x_train in self.X_train]
+        distances = [np.sqrt(np.sum((x - x_train) ** 2)) for x_train in self.X_train]
         k_indices = np.argsort(distances)[:self.k]
         k_nearest_labels = [self.y_train[i] for i in k_indices]
         most_common = Counter(k_nearest_labels).most_common(1)
         return most_common[0][0]
-    ''', language="python")
+'''
+st.code(knn_code, language='python')
 
-# Mostrar el código de la matriz de confusión y métricas
-with st.expander("Código para matriz de confusión y métricas"):
-    st.code('''
-def custom_confusion_matrix(y_true, y_pred):
-    unique_labels = np.unique(np.concatenate([y_true, y_pred]))
-    cm = np.zeros((len(unique_labels), len(unique_labels)), dtype=int)
-    for i, true_label in enumerate(unique_labels):
-        for j, pred_label in enumerate(unique_labels):
-            cm[i, j] = np.sum((y_true == true_label) & (y_pred == pred_label))
-    return cm
+# Mostrar el código de la matriz de confusión personalizada
+st.write("### Código de la Matriz de Confusión Personalizada y Cálculo de Métricas")
+confusion_code = '''
+def confusion_matrix_custom(y_true, y_pred):
+    unique_labels = np.unique(y_true)
+    matrix = np.zeros((len(unique_labels), len(unique_labels)), dtype=int)
+    label_to_index = {label: idx for idx, label in enumerate(unique_labels)}
+
+    for true_label, pred_label in zip(y_true, y_pred):
+        true_idx = label_to_index[true_label]
+        pred_idx = label_to_index[pred_label]
+        matrix[true_idx, pred_idx] += 1
+
+    return matrix
 
 def calculate_metrics(cm):
-    TP = cm[1, 1]
-    TN = cm[0, 0]
-    FP = cm[0, 1]
-    FN = cm[1, 0]
+    vp = np.diag(cm)
+    fp = cm.sum(axis=0) - vp
+    fn = cm.sum(axis=1) - vp
+    vn = cm.sum() - (fp + fn + vp)
 
-    accuracy = (TP + TN) / np.sum(cm)
-    precision = TP / (TP + FP) if (TP + FP) > 0 else 0
-    recall = TP / (TP + FN) if (TP + FN) > 0 else 0
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    accuracy = (vp.sum() / cm.sum()) if cm.sum() else 0
+    precision = np.where((vp + fp) > 0, vp / (vp + fp), 0)
+    recall = np.where((vp + fn) > 0, vp / (vp + fn), 0)
+    f1 = np.where((precision + recall) > 0, 2 * (precision * recall) / (precision + recall), 0)
 
-    return accuracy, precision, recall, f1
-    ''', language="python")
+    weighted_precision = np.average(precision, weights=cm.sum(axis=1))
+    weighted_recall = np.average(recall, weights=cm.sum(axis=1))
+    weighted_f1 = np.average(f1, weights=cm.sum(axis=1))
+
+    return accuracy, weighted_precision, weighted_recall, weighted_f1
+'''
+st.code(confusion_code, language='python')
+
+# Cálculo de la matriz de confusión personalizada
+cm_custom = confusion_matrix_custom(y_test, y_pred)
+st.write("#### Matriz de Confusión (Implementación Propia)")
+st.write(cm_custom)
+
+# Calcular y mostrar las métricas
+accuracy_custom, precision_custom, recall_custom, f1_custom = calculate_metrics(cm_custom)
+
+st.write(f"### Métricas calculadas con matriz de confusión personalizada")
+st.write(f"- **Exactitud**: {accuracy_custom:.2f}")
+st.write(f"- **Precisión (Promedio Ponderado)**: {precision_custom:.2f}")
+st.write(f"- **Recuperación (Promedio Ponderado)**: {recall_custom:.2f}")
+st.write(f"- **F1-Score (Promedio Ponderado)**: {f1_custom:.2f}")
