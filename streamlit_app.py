@@ -154,6 +154,19 @@ df = load_data()
 st.write("## Vista previa del dataset")
 st.dataframe(df.head())
 
+# Inicializar el modelo KNN y otros objetos en el estado de la sesión
+if 'imputer' not in st.session_state:
+    st.session_state.imputer = None
+if 'scaler' not in st.session_state:
+    st.session_state.scaler = None
+if 'pca' not in st.session_state:
+    st.session_state.pca = None
+if 'column_names' not in st.session_state:
+    st.session_state.column_names = []
+if 'best_model_name' not in st.session_state:
+    st.session_state.best_model_name = None
+
+
 # Diccionario para almacenar resultados
 results = {}
 metrics_table = []
@@ -183,11 +196,69 @@ for model_name, model in models.items():
     metrics_table.append([model_name, accuracy, precision, recall, f1, auc])
     results[model_name] = f1
 
+# Guardar los objetos de preprocesamiento en el estado de la sesión
+st.session_state['imputer'] = imputer
+st.session_state['scaler'] = scaler
+st.session_state['pca'] = pca
+st.session_state['column_names'] = column_names
+
 # Comparar los modelos y elegir el mejor
-# best_model_name = max(results, key=results.get)
-# st.write(f"## El mejor modelo es: {best_model_name} con F1 Score: {results[best_model_name]}")
+best_model_name = max(results, key=results.get)
+st.session_state['best_model_name'] = best_model_name
+st.write(f"## El mejor modelo es: {best_model_name} con F1 Score: {results[best_model_name]}")
 
 # Mostrar tabla comparativa de indicadores de performance
 st.write("## Comparativa de Indicadores de Desempeño")
 df_metrics = pd.DataFrame(metrics_table, columns=['Modelo', 'Exactitud', 'Precisión', 'Recuperación', 'F1 Score', 'AUC'])
 st.write(df_metrics)
+
+# Predicción con nuevos datos
+st.write("## Predicción con nuevos datos")
+new_file = st.file_uploader("Sube un archivo con nuevos datos para predicción (debe tener la misma estructura que el dataset de entrenamiento)", type="csv")
+
+if new_file is not None:
+    new_data = pd.read_csv(new_file)
+
+    # Verificar si los objetos ajustados existen
+    if imputer is None or scaler is None or pca is None:
+        st.error("El modelo no está entrenado. Entrena el modelo primero antes de realizar predicciones.")
+    else:
+        # Recuperar los objetos del estado de la sesión
+        best_model_name = st.session_state['best_model_name']
+        imputer = st.session_state['imputer']
+        scaler = st.session_state['scaler']
+        pca = st.session_state['pca']
+        column_names = st.session_state['column_names']
+
+        # Asegurar que las columnas estén en el mismo orden que el entrenamiento
+        new_data = new_data.drop(columns=['id'], errors='ignore')  # Eliminar columna ID si está presente
+        new_data = new_data.reindex(columns=column_names, fill_value=0)
+
+        # Imputar, normalizar y reducir dimensionalidad de los nuevos datos
+        new_data_imputed = imputer.transform(new_data)
+        new_data_processed = scaler.transform(new_data_imputed)
+        new_data_reduced = pca.transform(new_data_processed)
+
+        # Predecir con el mejor modelo
+        best_model = models[best_model_name]
+        predictions = best_model.predict(new_data_reduced)
+
+        # Asignar las predicciones al dataset
+        new_data['diagnosis'] = np.where(predictions == 1, 'M', 'B')
+
+        st.write("### Predicciones")
+        st.dataframe(new_data)
+        st.download_button(label="Descargar predicciones", data=new_data.to_csv(index=False), file_name="data_con_prediccion.csv")
+
+# Descargar archivo CSV de ejemplo
+example_data = {column: [] for column in column_names}
+
+example_df = pd.DataFrame(example_data)
+csv = example_df.to_csv(index=False)
+
+st.download_button(
+    label="Descargar archivo CSV de ejemplo",
+    data=csv,
+    file_name="data_para_prediccion_ejemplo.csv",
+    mime="text/csv"
+)
